@@ -70,13 +70,13 @@ func (c *Client) SetReady() {
 		return
 	}
 	c.lastSendReq = protocol.Request{}
-	pkg.Debug("设置 %s ready", c.id)
+	pkg.Debug("setting %s ready", c.id)
 	c.ready.Store(true)
 	c.readyChan <- struct{}{}
 }
 
 func (c *Client) SetWait(req protocol.Request) {
-	pkg.Debug("设置 %s wait", c.id)
+	pkg.Debug("setting %s wait", c.id)
 	c.lastSendReq = req
 	c.ready.Store(false)
 }
@@ -234,7 +234,7 @@ func (ps *Server) SendToClient(req protocol.Request, maxTry int, clientId, _ str
 
 		conn := cd.GetConn()
 		if conn == nil {
-			pkg.Warn("%s 没有可用的连接", clientId)
+			pkg.Warn("%s not found connection", clientId)
 			time.Sleep(time.Second)
 			return false
 		}
@@ -278,7 +278,7 @@ func (ps *Server) getOrCreateClient(req protocol.Request) (*Client, error) {
 					}
 					continue
 				}
-				pkg.Warn("等待 client %s ack 超时", c.id)
+				pkg.Warn("wait client %s ack overtime", c.id)
 				return
 			}
 			select {
@@ -334,7 +334,7 @@ func (ps *Server) ping(req protocol.Request, _ gnet.Conn) (out []byte, action gn
 		if v == "" {
 			continue
 		}
-		pkg.Debug("删除过时的矿机id: %s", v)
+		pkg.Debug("刪除過時的礦機id: %s", v)
 		client, ok := ps.getClient(v)
 		if !ok {
 			return nil, gnet.None

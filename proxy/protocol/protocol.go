@@ -121,7 +121,8 @@ func (cc *EncryptionProtocol) DecryptData(data []byte) (result []byte, err error
 		}
 	}
 
-	if cc.useSendConfusionData { // 去除随机混淆数据
+	if cc.useSendConfusionData {
+		// 去除隨機混淆數據
 		data = cc.separateConfusionData(data)
 	}
 	return data, nil

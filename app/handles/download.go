@@ -116,7 +116,7 @@ func PackScriptFile(c *gin.Context) {
 	dir := filepath.Join(BASEDIR, currentDir)
 	// build download url
 
-	u := "https://github.com/PerrorOne/miner-proxy/releases/download/" + args.ClientVersion
+	u := "https://github.com/chimerakang/miner-proxy/releases/download/" + args.ClientVersion
 	if dgu := c.GetString("download_github_url"); dgu != "" {
 		if !strings.HasSuffix(dgu, "/") {
 			dgu = dgu + "/"
@@ -129,7 +129,7 @@ func PackScriptFile(c *gin.Context) {
 
 	filename := fmt.Sprintf("miner-proxy_%s_%s", args.ClientSystemType, args.ClientSystemStruct)
 	if err := os.MkdirAll(dir, 0666); err != nil {
-		c.JSON(200, gin.H{"code": 500, "msg": fmt.Sprintf("创建临时文件失败: %s", err)})
+		c.JSON(200, gin.H{"code": 500, "msg": fmt.Sprintf("創建臨時文件失敗: %s", err)})
 		return
 	}
 	if args.ClientSystemType == "windows" {
@@ -139,23 +139,23 @@ func PackScriptFile(c *gin.Context) {
 	if _, err := os.Stat(filepath.Join(dir, filename)); err != nil {
 		resp, err := http.Get(fmt.Sprintf("%s/%s", u, filename))
 		if err != nil {
-			c.JSON(200, gin.H{"code": 500, "msg": fmt.Sprintf("从github中下载脚本失败: %s", err)})
+			c.JSON(200, gin.H{"code": 500, "msg": fmt.Sprintf("從github中下載腳本失敗: %s", err)})
 			return
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode != 200 {
-			c.JSON(200, gin.H{"code": 500, "msg": fmt.Sprintf("没有在 %s 中发现任何脚本内容, 请检查您的设置是否有问题", fmt.Sprintf("%s/%s", u, filename))})
+			c.JSON(200, gin.H{"code": 500, "msg": fmt.Sprintf("沒有在 %s 中發現任何腳本內容, 請檢查您的設置是否有問題", fmt.Sprintf("%s/%s", u, filename))})
 			return
 		}
 
 		f, err := os.OpenFile(filepath.Join(dir, filename), os.O_CREATE|os.O_WRONLY, 0666)
 		if err != nil {
-			c.JSON(200, gin.H{"code": 500, "msg": fmt.Sprintf("创建临时文件失败: %s", err)})
+			c.JSON(200, gin.H{"code": 500, "msg": fmt.Sprintf("創建臨時文件失敗: %s", err)})
 			return
 		}
 		if _, err := io.Copy(f, resp.Body); err != nil {
 			_ = f.Close()
-			c.JSON(200, gin.H{"code": 500, "msg": fmt.Sprintf("创建临时文件失败: %s", err)})
+			c.JSON(200, gin.H{"code": 500, "msg": fmt.Sprintf("創建臨時文件失敗: %s", err)})
 			return
 		}
 		_ = f.Close()
@@ -163,7 +163,7 @@ func PackScriptFile(c *gin.Context) {
 	// 构建文件
 	data := args.build(filename, strings.TrimRight(c.GetString("secretKey"), "0"), c.GetString("server_port"), strings.Split(c.Request.Host, ":")[0])
 	if err := os.MkdirAll(dir, 0666); err != nil {
-		c.JSON(200, gin.H{"code": 500, "msg": fmt.Sprintf("创建临时文件失败: %s", err)})
+		c.JSON(200, gin.H{"code": 500, "msg": fmt.Sprintf("創建臨時文件失敗: %s", err)})
 		return
 	}
 	var runName = "run.bat"
@@ -171,19 +171,19 @@ func PackScriptFile(c *gin.Context) {
 		runName = "run.sh"
 	}
 	if err := ioutil.WriteFile(filepath.Join(dir, runName), data, 0666); err != nil {
-		c.JSON(200, gin.H{"code": 500, "msg": fmt.Sprintf("写入文件失败: %s", err)})
+		c.JSON(200, gin.H{"code": 500, "msg": fmt.Sprintf("寫入文件失敗: %s", err)})
 		return
 	}
 	// 压缩
 	zipName := fmt.Sprintf("miner-proxy-%s.zip", args.ID())
 	zapF, err := os.OpenFile(filepath.Join(BASEDIR, zipName), os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
-		c.JSON(200, gin.H{"code": 500, "msg": fmt.Sprintf("创建zip文件失败: %s", err)})
+		c.JSON(200, gin.H{"code": 500, "msg": fmt.Sprintf("創建zip文件失敗: %s", err)})
 		return
 	}
 	defer zapF.Close()
 	if err := pkg.Zip(dir, zapF); err != nil {
-		c.JSON(200, gin.H{"code": 500, "msg": fmt.Sprintf("压缩文件失败: %s", err)})
+		c.JSON(200, gin.H{"code": 500, "msg": fmt.Sprintf("壓縮文件失敗: %s", err)})
 		return
 	}
 	downloadPath := fmt.Sprintf("/download/%s?name=%s", zipName, currentDir)

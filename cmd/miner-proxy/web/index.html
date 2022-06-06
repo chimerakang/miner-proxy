@@ -278,7 +278,7 @@
                 },
                 {
                     field: 'size',
-                    title: '<span>传输数据大小</span>',
+                    title: '<span>傳輸數據大小</span>',
                 },
             ]
         });
@@ -296,8 +296,8 @@
             queryParamsType: "limit",
             sidePagination: "server",
             totalField: 'total',
-            pageSize: 20,  //每页显示的记录数
-            pageNumber: 1, //当前第几页
+            pageSize: 20,  //每頁顯示的記錄數
+            pageNumber: 1, //當前第幾頁
             pageList: [20, 40, 50, 100],
             strictSearch: true,
             showColumns: true,
@@ -320,30 +320,30 @@
                 },
                 {
                     field: 'pool',
-                    title: '<span>矿池地址</span>'
+                    title: '<span>礦池地址</span>'
                 },
                 {
                     field: 'miners',
-                    title: '<span>矿工数量</span>',
+                    title: '<span>礦工數量</span>',
                     formatter: function (value, row, index)  {
                         CLIENT_DATA[row.client_id] = row
                         if (value === null){
-                            return "没有任何矿工使用该客户端"
+                            return "沒有任何礦工使用該客戶端"
                         }
-                        return `<a style="color: blue;cursor:pointer" onclick="show_client_miners('${row.client_id}')">总计 ${value.length} 个矿工使用该客户端</a>`
+                        return `<a style="color: blue;cursor:pointer" onclick="show_client_miners('${row.client_id}')">总计 ${value.length} 個礦工使用該客戶端</a>`
                     }
                 },
                 {
                     field: 'online_time',
-                    title: '<span>在线时长</span>',
+                    title: '<span>在線時長</span>',
                 },
                 {
                     field: 'data_size',
-                    title: '<span>传输数据大小</span>'
+                    title: '<span>傳輸數據大小</span>'
                 },
                 {
                     field: 'delay',
-                    title: '<span >客户端-服务端延迟</span>',
+                    title: '<span >客戶端-服務端延遲</span>',
                 },
                 {
                     field: '',
@@ -402,7 +402,7 @@
                         if (append_count === 0){
                             $("#alert-success").show()
                             $("#alert-success").empty()
-                            $("#alert-success").append(`<b style="color:red;">警告</b> <p>当前还没有发布可用的版本, 请等待。您可以选择0.5.0以下版本安装, 您可以访问 <a href="https://github.com/PerrorOne/miner-proxy/releases">releases</a>查看可用的版本</p>`)
+                            $("#alert-success").append(`<b style="color:red;">警告</b> <p>當前還沒有發布可用的版本, 請等待。您可以選擇0.5.0以下版本安裝, 您可以訪問<a href="https://github.com/chimerakang/miner-proxy/releases">releases</a>查看可用的版本</p>`)
                         }
                     }
                 })

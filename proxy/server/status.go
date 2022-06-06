@@ -34,7 +34,7 @@ func init() {
 					return true
 				}
 				if err := p.UpdateUsers(); err != nil {
-					pkg.Error("更新订阅用户失败: %s", err)
+					pkg.Error("更新訂閱用戶失敗: %s", err)
 					return true
 				}
 				return true
@@ -46,28 +46,29 @@ func init() {
 
 func Show(offlineTime time.Duration) {
 	var offlineClient = hashset.New()
-	table, _ := gotable.Create("客户端id", "矿工id", "Ip", "传输数据大小", "连接时长", "是否在线", "客户端-服务端延迟", "矿池连接", "预估算力(仅通过流量大小判断)")
+	table, _ := gotable.Create("Client id", "Miner id", "ip", "傳輸數據大小", "連接時長", "is online", "客户端-服務端延遲", "礦池連接", "預估算力(僅通過流量大小判斷)")
 	for _, v := range ClientInfo() {
 		for _, v1 := range v.Miners {
 			if !v1.IsOnline && !v1.stopTime.IsZero() && time.Since(v1.stopTime).Seconds() >= offlineTime.Seconds() {
-				offlineClient.Add(fmt.Sprintf("ip: %s; 池: %s; 停止时间: %s", v1.Ip, v1.Pool, v1.StopTime))
+				offlineClient.Add(fmt.Sprintf("ip: %s; 池: %s; 停止時間: %s", v1.Ip, v1.Pool, v1.StopTime))
 				clients.Delete(v1.Id)
 			}
 
 			_ = table.AddRow(map[string]string{
-				"客户端id":     v.ClientId,
-				"矿工id":      v1.Id,
-				"Ip":        v1.Ip,
-				"传输数据大小":    v1.Size,
-				"连接时长":      v1.ConnTime,
-				"矿池连接":      v1.Pool,
-				"是否在线":      cast.ToString(v1.IsOnline),
-				"客户端-服务端延迟": v.Delay,
+				"Client id": v.ClientId,
+				"Miner id":  v1.Id,
+				"ip":        v1.Ip,
+				"傳輸數據大小":    v1.Size,
+				"連接時長":      v1.ConnTime,
+				"礦池連接":      v1.Pool,
+				"is online": cast.ToString(v1.IsOnline),
+				"客户端-服務端延遲": v.Delay,
 			})
 		}
 	}
 	fmt.Println(table.String())
-	if offlineClient.Size() != 0 { // 发送掉线通知
+	if offlineClient.Size() != 0 {
+		// 發送掉線通知
 		SendOfflineIps(pkg.Interface2Strings(offlineClient.Values()))
 	}
 }
@@ -125,14 +126,14 @@ func SendOfflineIps(offlineIps []string) {
 	}
 	var ips = strings.Join(offlineIps, "\n")
 	if len(offlineIps) > 10 {
-		ips = fmt.Sprintf("%s 等 %d个ip", strings.Join(offlineIps[:10], "\n"), len(offlineIps))
+		ips = fmt.Sprintf("%s 等 %d 個 ip", strings.Join(offlineIps[:10], "\n"), len(offlineIps))
 	}
-	ips = fmt.Sprintf("您有掉线的机器:\n%s", ips)
+	ips = fmt.Sprintf("您有掉線的機器:\n%s", ips)
 	pushers.Range(func(key, value interface{}) bool {
 		p := value.(*pusher)
-		pkg.Info("发送掉线通知: %+v", p.Users)
+		pkg.Info("發送掉線通知: %+v", p.Users)
 		if err := p.SendMessage2All(ips); err != nil {
-			pkg.Error("发送通知失败: %s", err)
+			pkg.Error("發送通知失敗: %s", err)
 		}
 		return true
 	})
@@ -226,13 +227,13 @@ func ClientInfo() []*ClientRemoteAddr {
 		}
 
 		if _, ok := existIpMiner[c.ip]; ok && c.closed.Load() {
-			pkg.Debug("删除旧的miner连接, 使用新的miner连接")
+			pkg.Debug("刪除舊的miner連接, 使用新的miner連接")
 			clients.Delete(key)
 			return true
 		}
 
 		if time.Since(c.startTime).Seconds() >= 30 && c.dataSize.Load() <= 0 {
-			pkg.Debug("删除未使用的连接")
+			pkg.Debug("刪除未使用的連接")
 			clients.Delete(key)
 			return true
 		}
@@ -280,7 +281,7 @@ func ClientInfo() []*ClientRemoteAddr {
 		}
 
 		d := v.(Delay)
-		c.Delay = "等待检测"
+		c.Delay = "等待檢測"
 		if d.delay.Seconds() <= 120 {
 			c.Delay = d.delay.String()
 		}
