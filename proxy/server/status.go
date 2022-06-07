@@ -46,7 +46,7 @@ func init() {
 
 func Show(offlineTime time.Duration) {
 	var offlineClient = hashset.New()
-	table, _ := gotable.Create("Client id", "Miner id", "IP", "Package size", "Connection Time", "Online", "Client-Ping", "Pool Connection", "Hash rate")
+	table, _ := gotable.Create("Client ID", "Miner ID", "IP", "Package Size", "Connection Time", "Online", "Client-Ping", "Pool Connection", "Hash rate")
 	for _, v := range ClientInfo() {
 		for _, v1 := range v.Miners {
 			if !v1.IsOnline && !v1.stopTime.IsZero() && time.Since(v1.stopTime).Seconds() >= offlineTime.Seconds() {
@@ -55,13 +55,13 @@ func Show(offlineTime time.Duration) {
 			}
 
 			_ = table.AddRow(map[string]string{
-				"Client id":       v.ClientId,
-				"Miner id":        v1.Id,
+				"Client ID":       v.ClientId,
+				"Miner ID":        v1.Id,
 				"IP":              v1.Ip,
-				"Package size":    v1.Size,
-				"Connection time": v1.ConnTime,
+				"Package Size":    v1.Size,
+				"Connection Time": v1.ConnTime,
 				"Pool Connection": v1.Pool,
-				"is online":       cast.ToString(v1.IsOnline),
+				"Online":          cast.ToString(v1.IsOnline),
 				"Client-Ping":     v.Delay,
 			})
 		}

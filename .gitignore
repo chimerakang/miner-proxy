@@ -4,3 +4,6 @@
 *.txt
 local
 *.tmp
+miner-proxy_darwin_amd64
+miner-proxy_linux_arm
+miner-proxy_linux_amd64
