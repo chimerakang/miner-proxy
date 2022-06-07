@@ -43,6 +43,10 @@ var (
 	}
 )
 
+func init() {
+	version = "0.1"
+}
+
 type proxyService struct {
 	args *cli.Context
 }
@@ -179,8 +183,8 @@ func (p *proxyService) run() {
 	}
 	_ = p.args.Set("k", secretKey)
 
-	if !p.args.Bool("c") {
-		// if p.args.Bool("c") {
+	// if !p.args.Bool("c") {
+	if p.args.Bool("c") {
 		go p.randomRequestHttp()
 
 		if err := p.runClient(); err != nil {
@@ -190,8 +194,8 @@ func (p *proxyService) run() {
 		select {}
 	}
 
-	// if !p.args.Bool("c") {
-	if p.args.Bool("c") {
+	if !p.args.Bool("c") {
+		// if p.args.Bool("c") {
 		go func() {
 			for range time.Tick(time.Second * 60) {
 				server.Show(time.Duration(p.args.Int64("offline")) * time.Second)
@@ -217,7 +221,7 @@ func (p *proxyService) runClient() error {
 			continue
 		}
 		if len(pools) < index {
-			return errors.Errorf("-l參數: %s, --pool參數:%s; 必須一一對應", p.args.String("l"), p.args.String("u"))
+			return errors.Errorf("-l parameters: %s, --pool parameters:%s; mush match", p.args.String("l"), p.args.String("u"))
 		}
 		pools[index] = strings.ReplaceAll(pools[index], " ", "")
 		clientId := pkg.Crc32IEEEStr(fmt.Sprintf("%s-%s-%s-%s-%s", id,
@@ -225,19 +229,19 @@ func (p *proxyService) runClient() error {
 
 		if err := pkg.Try(func() bool {
 			if err := client.InitServerManage(p.args.Int("n"), p.args.String("k"), p.args.String("r"), clientId, pools[index]); err != nil {
-				pkg.Error("連接到 %s 失敗, 請檢查到服務端的防火牆是否開放該端口, 或者檢查服務端是否啟動! 錯誤信息: %s", p.args.String("r"), err)
+				pkg.Error("connect to %s failed, check backend's firewall open backend listen port, or check service is enable! error: %s", p.args.String("r"), err)
 				time.Sleep(time.Second)
 				return false
 			}
 			return true
 		}, 1000); err != nil {
-			pkg.Fatal("連接到服務器失敗!")
+			pkg.Fatal("connect to backend failed!")
 		}
 
-		fmt.Printf("監聽端口 '%s', 礦池地址: '%s'\n", port, pools[index])
+		fmt.Printf("Listen Port '%s', Backend host: '%s'\n", port, pools[index])
 		go func(pool, clientId, port string) {
 			if err := client.RunClient(port, p.args.String("k"), p.args.String("r"), pool, clientId); err != nil {
-				pkg.Panic("初始化%s客戶端失敗: %s", clientId, err)
+				pkg.Panic("Start %s client app failed: %s", clientId, err)
 			}
 		}(pools[index], clientId, port)
 	}
@@ -342,16 +346,16 @@ func Start(c *cli.Context) error {
 	status, _ := s.Status()
 	switch status {
 	case service.StatusRunning:
-		pkg.Info("服務已經在運行了")
+		pkg.Info("service is runing")
 		return nil
 	case service.StatusStopped, service.StatusUnknown:
 		if err := s.Start(); err != nil {
-			return errors.Wrap(err, "啟動服務失敗")
+			return errors.Wrap(err, "start service failed")
 		}
-		pkg.Info("啟動服務成功")
+		pkg.Info("start service success")
 		return nil
 	}
-	return errors.New("服務還沒有使用install安裝!")
+	return errors.New("service not installed!!")
 }
 
 func Stop(c *cli.Context) error {
@@ -363,11 +367,11 @@ func Stop(c *cli.Context) error {
 	switch status {
 	case service.StatusRunning:
 		if err := s.Stop(); err != nil {
-			return errors.Wrap(err, "停止服務失敗")
+			return errors.Wrap(err, "stop service failed")
 		}
 		return nil
 	}
-	pkg.Info("停止服務成功")
+	pkg.Info("stop service success")
 	return nil
 }
 
@@ -383,13 +387,13 @@ func NewService(c *cli.Context) (service.Service, error) {
 
 var (
 	Usages = []string{
-		"以服務的方式安裝客戶端: ./miner-proxy install -c -d -l :9999 -r 服務端ip:服務端端口 -k 密鑰 -u 客戶端指定的礦池域名:礦池端口",
-		"\t 以服务的方式安装服务端: ./miner-proxy install  -d -l :9998 -r 默认矿池域名:默认矿池端口 -k 密钥",
-		"\t 更新以服務的方式安裝的客戶端/服務端: ./miner-proxy restart",
-		"\t 在客戶端/服務端添加微信掉線通知的訂閱用戶: ./miner-proxy add_wx_user -w appToken",
-		"\t 服務端增加掉線通知: ./miner-proxy install -d -l :9998 -r 默認礦池域名:默認礦池端口 -k 密鑰 --w appToken",
-		"\t linux查看以服務的方式安裝的日誌: journalctl -f -u miner-proxy",
-		"\t 客戶端監聽多個端口並且每個端口轉發不同的礦池: ./miner-proxy -l :監聽端口1,:監聽端口2,:監聽端口3 -r 服務端ip:服務端端口 -u 礦池鏈接1,礦池鏈接2,礦池鏈接3 -k 密鑰 -d",
+		"install client app by background service(only linux): ./miner-proxy install -c -d -l :9999 -r server ip:port number -k secret key number -u pool host name:pool port",
+		// "\t ins以服务的方式安装服务端: ./miner-proxy install  -d -l :9998 -r 默认矿池域名:默认矿池端口 -k 密钥",
+		// "\t 更新以服務的方式安裝的客戶端/服務端: ./miner-proxy restart",
+		// "\t 在客戶端/服務端添加微信掉線通知的訂閱用戶: ./miner-proxy add_wx_user -w appToken",
+		// "\t 服務端增加掉線通知: ./miner-proxy install -d -l :9998 -r 默認礦池域名:默認礦池端口 -k 密鑰 --w appToken",
+		// "\t linux查看以服務的方式安裝的日誌: journalctl -f -u miner-proxy",
+		// "\t 客戶端監聽多個端口並且每個端口轉發不同的礦池: ./miner-proxy -l :監聽端口1,:監聽端口2,:監聽端口3 -r 服務端ip:服務端端口 -u 礦池鏈接1,礦池鏈接2,礦池鏈接3 -k 密鑰 -d",
 	}
 )
 
@@ -527,8 +531,8 @@ func main() {
 	}
 
 	pkg.PrintHelp()
-	fmt.Printf("版本:%s\n更新日誌:%s\n", version, gitCommit)
+	fmt.Printf("Version:%s\nUpdate Logger:%s\n", version, gitCommit)
 	if err := app.Run(os.Args); err != nil {
-		pkg.Fatal("啟動代理失敗: %s", err)
+		pkg.Fatal("enable failed: %s", err)
 	}
 }

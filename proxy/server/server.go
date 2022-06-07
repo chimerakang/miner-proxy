@@ -334,7 +334,7 @@ func (ps *Server) ping(req protocol.Request, _ gnet.Conn) (out []byte, action gn
 		if v == "" {
 			continue
 		}
-		pkg.Debug("刪除過時的礦機id: %s", v)
+		pkg.Debug("delete obsolete miner id: %s", v)
 		client, ok := ps.getClient(v)
 		if !ok {
 			return nil, gnet.None

@@ -11,7 +11,7 @@ func PrintHelp() {
 	myFigure.Print()
 	// 免責聲明以及專案地址
 	fmt.Println("github repository: https://github.com/chimerakang/miner-proxy")
-	fmt.Println("免責聲明: 本工具只適用於測試與學習使用!!")
+	fmt.Println("Disclaimer: This tool is for testing and learning purposes only!!")
 }
 
 func StringHelp() string {

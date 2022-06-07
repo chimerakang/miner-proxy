@@ -1,0 +1,1 @@
+miner-proxy_windows_amd64.exe -l :9999 -r localhost:9998 -k 12345 -c

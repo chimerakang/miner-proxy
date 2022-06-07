@@ -1,0 +1,1 @@
+miner-proxy_windows_amd64.exe -l :9998 -r eth-kr.flexpool.io:4444 -k 12345

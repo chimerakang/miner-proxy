@@ -100,7 +100,7 @@ func (z ZipParams) build(filename, secretKey, serverPort, serverHost string) []b
 
 func (z ZipParams) Check() error {
 	if z.ClientSystemType == "" || z.ClientSystemStruct == "" || z.ClientRunType == "" || len(z.Forward) == 0 {
-		return fmt.Errorf("参数错误")
+		return fmt.Errorf("parameter error")
 	}
 	return nil
 }
@@ -108,7 +108,7 @@ func (z ZipParams) Check() error {
 func PackScriptFile(c *gin.Context) {
 	args := new(ZipParams)
 	if err := c.BindJSON(args); err != nil {
-		c.JSON(200, gin.H{"code": 400, "msg": "参数错误"})
+		c.JSON(200, gin.H{"code": 400, "msg": "parameter error"})
 		return
 	}
 

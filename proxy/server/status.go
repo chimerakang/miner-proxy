@@ -46,23 +46,23 @@ func init() {
 
 func Show(offlineTime time.Duration) {
 	var offlineClient = hashset.New()
-	table, _ := gotable.Create("Client id", "Miner id", "ip", "傳輸數據大小", "連接時長", "is online", "客户端-服務端延遲", "礦池連接", "預估算力(僅通過流量大小判斷)")
+	table, _ := gotable.Create("Client id", "Miner id", "IP", "Package size", "Connection Time", "Online", "Client-Ping", "Pool Connection", "Hash rate")
 	for _, v := range ClientInfo() {
 		for _, v1 := range v.Miners {
 			if !v1.IsOnline && !v1.stopTime.IsZero() && time.Since(v1.stopTime).Seconds() >= offlineTime.Seconds() {
-				offlineClient.Add(fmt.Sprintf("ip: %s; 池: %s; 停止時間: %s", v1.Ip, v1.Pool, v1.StopTime))
+				offlineClient.Add(fmt.Sprintf("ip: %s; pool: %s; stop time: %s", v1.Ip, v1.Pool, v1.StopTime))
 				clients.Delete(v1.Id)
 			}
 
 			_ = table.AddRow(map[string]string{
-				"Client id": v.ClientId,
-				"Miner id":  v1.Id,
-				"ip":        v1.Ip,
-				"傳輸數據大小":    v1.Size,
-				"連接時長":      v1.ConnTime,
-				"礦池連接":      v1.Pool,
-				"is online": cast.ToString(v1.IsOnline),
-				"客户端-服務端延遲": v.Delay,
+				"Client id":       v.ClientId,
+				"Miner id":        v1.Id,
+				"IP":              v1.Ip,
+				"Package size":    v1.Size,
+				"Connection time": v1.ConnTime,
+				"Pool Connection": v1.Pool,
+				"is online":       cast.ToString(v1.IsOnline),
+				"Client-Ping":     v.Delay,
 			})
 		}
 	}
@@ -227,13 +227,13 @@ func ClientInfo() []*ClientRemoteAddr {
 		}
 
 		if _, ok := existIpMiner[c.ip]; ok && c.closed.Load() {
-			pkg.Debug("刪除舊的miner連接, 使用新的miner連接")
+			pkg.Debug("delete old miner connection, use new miner connection")
 			clients.Delete(key)
 			return true
 		}
 
 		if time.Since(c.startTime).Seconds() >= 30 && c.dataSize.Load() <= 0 {
-			pkg.Debug("刪除未使用的連接")
+			pkg.Debug("delete unused connection")
 			clients.Delete(key)
 			return true
 		}
@@ -281,7 +281,7 @@ func ClientInfo() []*ClientRemoteAddr {
 		}
 
 		d := v.(Delay)
-		c.Delay = "等待檢測"
+		c.Delay = "Checking..."
 		if d.delay.Seconds() <= 120 {
 			c.Delay = d.delay.String()
 		}
