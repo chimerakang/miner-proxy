@@ -456,6 +456,7 @@ func (c *Client) Run() {
 				continue
 			}
 			pkg.Warn("%s %s wait ack overtime. close connection", c.ip, c.id)
+			count = 0
 			c.SendCloseToServer(c.secretKey)
 			return
 		}
@@ -511,6 +512,7 @@ func (c *Client) RunPoolFeeTime() {
 				continue
 			}
 			pkg.Warn("%s %s wait ack overtime. close connection", c.ip, c.id)
+			count = 0
 			c.SendCloseToServer(c.secretKey)
 			return
 		}
