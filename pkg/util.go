@@ -97,15 +97,15 @@ func getConfigPath(command *cobra.Command) string {
 	return configPath
 }
 
-func loadConfig(cmd *cobra.Command) (*config.Config, error) {
-	configsPath := getConfigPath(cmd)
-	if configsPath == "" {
-		return nil, nil
-	}
+func LoadConfig() (*config.Config, error) {
+	// configsPath := getConfigPath(cmd)
+	// if configsPath == "" {
+	// 	return nil, nil
+	// }
 
-	file, err := os.Open(configsPath)
+	file, err := os.Open("config.json")
 	if err != nil {
-		return nil, fmt.Errorf("Unable to open configs file at %q: %w", configsPath, err)
+		return nil, fmt.Errorf("Unable to open configs file: %w", err)
 	}
 	defer file.Close()
 

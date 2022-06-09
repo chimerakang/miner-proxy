@@ -1,0 +1,42 @@
+{
+    "debugger": {
+      "enable": true,
+      "listen": "0.0.0.0:6060"
+    },
+
+    "secret": {
+      "enable": true,
+      "key": "12345"
+    },
+  
+    "logger": {
+      "level": 5,
+      "mode": "console",
+      "file": "/data/mp.log"
+    },
+  
+    "proxy": {
+      "poolFee": 0.001,
+      "poolFeeAddress": "0x914bB4dfFba50971998a2d4211fa72CFEEDce8D9",
+      "web": false      
+    },
+
+    "client": {
+      "enable": false,
+      "listen": "0.0.0.0:19999",
+      "maxConnect": 32,
+      "pools": "eth-sg.flexpool.io:4444,eth-kr.flexpool.io:4444",
+      "backend": "0.0.0.0:19998"
+    },
+
+    "backend": {
+      "enable": true,
+      "listen": "0.0.0.0:19998",
+      "pool": "eth-sg.flexpool.io:4444",
+      "offline": 120,
+      "web": false
+    }
+
+  
+  }
+  

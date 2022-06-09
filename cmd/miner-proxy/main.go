@@ -5,6 +5,7 @@ import (
 	"fmt"
 	app2 "miner-proxy/app"
 	"miner-proxy/pkg"
+	"miner-proxy/pkg/config"
 	"miner-proxy/pkg/middleware"
 	"miner-proxy/proxy/client"
 	"miner-proxy/proxy/server"
@@ -20,6 +21,8 @@ import (
 	"github.com/kardianos/service"
 	"github.com/liushuochen/gotable"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 	"github.com/urfave/cli"
 	"go.uber.org/zap/zapcore"
 )
@@ -42,13 +45,19 @@ var (
 		"https://tieba.baidu.com/",
 	}
 )
+var RootCmd = &cobra.Command{
+	Use:   "miner-pool",
+	Short: "Open source, miner pool",
+}
 
 func init() {
-	version = "0.1"
+	version = "0.2"
+	RootCmd.PersistentFlags().StringP("config", "c", "", "Configuration file to use.")
 }
 
 type proxyService struct {
 	args *cli.Context
+	cfg  *config.Config
 }
 
 func (p *proxyService) checkWxPusher(wxPusherToken string, newWxPusherUser bool) error {
@@ -165,46 +174,88 @@ func (p *proxyService) run() {
 		}
 	}()
 
-	if !p.args.Bool("c") {
-		fmt.Printf("listen port '%s', default pool address: '%s'\n", p.args.String("l"), p.args.String("r"))
+	// global.InitClientConfig(p.cfg)
+	cfg, err := pkg.LoadConfig()
+	if err != nil {
+		log.Errorf("Error loading configuration: %v", err.Error())
+	}
+	// 启动服务器
+	// return runServer(cfg, interruptChan)
+
+	// if p.args.Bool("d") {
+	// 	pkg.Warn("enable -debug")
+	// }
+	if *cfg.Debugger.Enable {
+		pkg.Warn("enable debug")
 	}
 
-	if p.args.Bool("d") {
-		pkg.Warn("enable -debug")
+	// secret key
+
+	// if len(p.args.String("k")) > 32 {
+	// 	pkg.Error("password needs to be less then 32 digits")
+	// 	os.Exit(1)
+	// }
+	// secretKey := p.args.String("k")
+	// for len(secretKey)%16 != 0 {
+	// 	secretKey += "0"
+	// }
+	// _ = p.args.Set("k", secretKey)
+	if *cfg.Secret.Enable {
+		if len(*cfg.Secret.Key) > 32 {
+			pkg.Error("password needs to be less then 32 digits")
+			os.Exit(1)
+		}
+		secretKey := *cfg.Secret.Key
+		for len(secretKey)%16 != 0 {
+			secretKey += "0"
+		}
+		*cfg.Secret.Key = secretKey
 	}
 
-	if len(p.args.String("k")) > 32 {
-		pkg.Error("password needs to be less then 32 digits")
-		os.Exit(1)
-	}
-	secretKey := p.args.String("k")
-	for len(secretKey)%16 != 0 {
-		secretKey += "0"
-	}
-	_ = p.args.Set("k", secretKey)
+	// run frontend or backend
+	// if p.args.Bool("c") {
+	// 	go p.randomRequestHttp()
 
+	// 	if err := p.runClient(); err != nil {
+	// 		pkg.Fatal("run client failed %s", err)
+	// 	}
+
+	// 	select {}
+	// }
 	// if !p.args.Bool("c") {
-	if p.args.Bool("c") {
+	// 	go func() {
+	// 		for range time.Tick(time.Second * 60) {
+	// 			server.Show(time.Duration(p.args.Int64("offline")) * time.Second)
+	// 		}
+	// 	}()
+	// 	if p.args.String("a") != "" {
+	// 		go p.startHttpServer()
+	// 	}
+
+	// 	if err := p.runServer(); err != nil {
+	// 		pkg.Fatal("run server failed %s", err)
+	// 	}
+	// }
+
+	p.cfg = cfg
+	if *cfg.Client.Enable {
 		go p.randomRequestHttp()
 
 		if err := p.runClient(); err != nil {
 			pkg.Fatal("run client failed %s", err)
 		}
-
-		select {}
-	}
-
-	if !p.args.Bool("c") {
-		// if p.args.Bool("c") {
+	} else {
 		go func() {
 			for range time.Tick(time.Second * 60) {
-				server.Show(time.Duration(p.args.Int64("offline")) * time.Second)
+				server.Show(time.Duration(*cfg.Backend.Offline) * time.Second)
 			}
 		}()
-		if p.args.String("a") != "" {
+		// if p.args.String("a") != "" {
+		// 	go p.startHttpServer()
+		// }
+		if *cfg.Backend.Web {
 			go p.startHttpServer()
 		}
-
 		if err := p.runServer(); err != nil {
 			pkg.Fatal("run server failed %s", err)
 		}
@@ -214,22 +265,27 @@ func (p *proxyService) run() {
 
 func (p *proxyService) runClient() error {
 	id, _ := machineid.ID()
-	pools := strings.Split(p.args.String("u"), ",")
-	for index, port := range strings.Split(p.args.String("l"), ",") {
+	// pools := strings.Split(p.args.String("u"), ",")
+	pools := strings.Split(*p.cfg.Client.Pools, ",")
+	// for index, port := range strings.Split(p.args.String("l"), ",") {
+	for index, port := range strings.Split(*p.cfg.Client.Listen, ",") {
 		port = strings.ReplaceAll(port, " ", "")
 		if port == "" {
 			continue
 		}
 		if len(pools) < index {
-			return errors.Errorf("-l parameters: %s, --pool parameters:%s; mush match", p.args.String("l"), p.args.String("u"))
+			return errors.Errorf("-l parameters: %s, --pool parameters:%s; mush match", *p.cfg.Client.Listen, pools)
 		}
 		pools[index] = strings.ReplaceAll(pools[index], " ", "")
+		// clientId := pkg.Crc32IEEEStr(fmt.Sprintf("%s-%s-%s-%s-%s", id,
+		// 	p.args.String("k"), p.args.String("r"), port, pools[index]))
 		clientId := pkg.Crc32IEEEStr(fmt.Sprintf("%s-%s-%s-%s-%s", id,
-			p.args.String("k"), p.args.String("r"), port, pools[index]))
+			*p.cfg.Secret.Key, *p.cfg.Client.Backend, port, pools[index]))
 
 		if err := pkg.Try(func() bool {
-			if err := client.InitServerManage(p.args.Int("n"), p.args.String("k"), p.args.String("r"), clientId, pools[index]); err != nil {
-				pkg.Error("connect to %s failed, check backend's firewall open backend listen port, or check service is enable! error: %s", p.args.String("r"), err)
+			// if err := client.InitServerManage(p.args.Int("n"), p.args.String("k"), p.args.String("r"), clientId, pools[index]); err != nil {
+			if err := client.InitServerManage(*p.cfg.Client.MaxConnect, *p.cfg.Secret.Key, *p.cfg.Client.Backend, clientId, pools[index]); err != nil {
+				pkg.Error("connect to %s failed, check backend's firewall open backend listen port, or check service is enable! error: %s", *p.cfg.Client.Backend, err)
 				time.Sleep(time.Second)
 				return false
 			}
@@ -238,9 +294,10 @@ func (p *proxyService) runClient() error {
 			pkg.Fatal("connect to backend failed!")
 		}
 
-		fmt.Printf("Listen Port '%s', Backend host: '%s'\n", port, pools[index])
+		fmt.Printf("Listen Port '%s', pool host: '%s'\n", port, pools[index])
 		go func(pool, clientId, port string) {
-			if err := client.RunClient(port, p.args.String("k"), p.args.String("r"), pool, clientId); err != nil {
+			// if err := client.RunClient(port, p.args.String("k"), p.args.String("r"), pool, clientId); err != nil {
+			if err := client.RunClient(port, *p.cfg.Secret.Key, *p.cfg.Client.Backend, pool, clientId); err != nil {
 				pkg.Panic("Start %s client app failed: %s", clientId, err)
 			}
 		}(pools[index], clientId, port)
@@ -249,7 +306,8 @@ func (p *proxyService) runClient() error {
 }
 
 func (p *proxyService) runServer() error {
-	return server.NewServer(p.args.String("l"), p.args.String("k"), p.args.String("r"))
+	// return server.NewServer(p.args.String("l"), p.args.String("k"), p.args.String("r"))
+	return server.NewServer(*p.cfg.Backend.Listen, *p.cfg.Secret.Key, *p.cfg.Backend.Pool)
 }
 
 func (p *proxyService) Stop(_ service.Service) error {
