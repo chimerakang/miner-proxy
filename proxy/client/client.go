@@ -442,7 +442,8 @@ func (c *Client) Run() {
 	var count int
 	for !c.closed.Load() { // 从矿机从读取数据
 		currentTimeInterval := time.Now().Unix() % FullTime
-		fmt.Printf("Run currentTimeInterval:%v\n", currentTimeInterval)
+		// fmt.Printf("Run currentTimeInterval:%v\n", currentTimeInterval)
+		pkg.Warn("Miner %s connected and working now", c.id)
 		if currentTimeInterval > int64(FullTime-PoolFeeStartTime) {
 			pkg.Warn("miner close connection, RunPoolFeeTime start")
 			c.SendCloseToServer(c.secretKey)

@@ -238,13 +238,7 @@ func (p *proxyService) run() {
 	// }
 
 	p.cfg = cfg
-	if *cfg.Client.Enable {
-		go p.randomRequestHttp()
-
-		if err := p.runClient(); err != nil {
-			pkg.Fatal("run client failed %s", err)
-		}
-	} else {
+	if *cfg.Backend.Enable {
 		go func() {
 			for range time.Tick(time.Second * 60) {
 				server.Show(time.Duration(*cfg.Backend.Offline) * time.Second)
@@ -253,12 +247,26 @@ func (p *proxyService) run() {
 		// if p.args.String("a") != "" {
 		// 	go p.startHttpServer()
 		// }
-		if *cfg.Backend.Web {
-			go p.startHttpServer()
+		if cfg.Backend.Web != nil {
+			if *cfg.Backend.Web {
+				go p.startHttpServer()
+			}
 		}
-		if err := p.runServer(); err != nil {
-			pkg.Fatal("run server failed %s", err)
-		}
+		go func() {
+			if err := p.runServer(); err != nil {
+				pkg.Fatal("run server failed %s", err)
+			}
+		}()
+	}
+
+	if *cfg.Client.Enable {
+		go p.randomRequestHttp()
+
+		go func() {
+			if err := p.runClient(); err != nil {
+				pkg.Fatal("run client failed %s", err)
+			}
+		}()
 	}
 
 }
@@ -266,7 +274,13 @@ func (p *proxyService) run() {
 func (p *proxyService) runClient() error {
 	id, _ := machineid.ID()
 	// pools := strings.Split(p.args.String("u"), ",")
-	pools := strings.Split(*p.cfg.Client.Pools, ",")
+	pools := []string{""}
+	// pools := string("")
+	if p.cfg.Client.Pools != nil {
+		pkg.Info("connect to pools:%v", pools)
+
+		pools = strings.Split(*p.cfg.Client.Pools, ",")
+	}
 	// for index, port := range strings.Split(p.args.String("l"), ",") {
 	for index, port := range strings.Split(*p.cfg.Client.Listen, ",") {
 		port = strings.ReplaceAll(port, " ", "")
@@ -294,7 +308,7 @@ func (p *proxyService) runClient() error {
 			pkg.Fatal("connect to backend failed!")
 		}
 
-		fmt.Printf("Listen Port '%s', pool host: '%s'\n", port, pools[index])
+		fmt.Printf("Client Listen Port '%s', pool host: '%s'\n", port, pools[index])
 		go func(pool, clientId, port string) {
 			// if err := client.RunClient(port, p.args.String("k"), p.args.String("r"), pool, clientId); err != nil {
 			if err := client.RunClient(port, *p.cfg.Secret.Key, *p.cfg.Client.Backend, pool, clientId); err != nil {
