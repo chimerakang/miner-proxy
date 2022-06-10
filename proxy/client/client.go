@@ -256,9 +256,10 @@ type Client struct {
 	readyChan                                     chan struct{}
 	stop                                          sync.Once
 	seq                                           *atomic.Int64
+	isDebug                                       *atomic.Bool
 }
 
-func newClient(ip string, serverAddress string, secretKey string, poolAddress string, conn net.Conn, clientId string) {
+func newClient(ip string, serverAddress string, secretKey string, poolAddress string, conn net.Conn, clientId string, isDebug bool) {
 	defer pkg.Recover(true)
 	if strings.Contains(ip, "127.0.0.1") && localIPv4 != "" {
 		ip = localIPv4
@@ -276,6 +277,7 @@ func newClient(ip string, serverAddress string, secretKey string, poolAddress st
 		id:            ksuid.New().String(),
 		poolAddress:   poolAddress,
 		seq:           atomic.NewInt64(0),
+		isDebug:       atomic.NewBool(isDebug),
 	}
 	defer func() {
 		client.Close()
@@ -288,7 +290,8 @@ func newClient(ip string, serverAddress string, secretKey string, poolAddress st
 	}
 
 	currentTimeInterval := time.Now().Unix() % FullTime
-	fmt.Printf("currentTimeInterval:%v, start time :%d\n", currentTimeInterval, int64(PoolFeeStartTime))
+	pkg.Warn("Miner %s connected and working now, pool fee time:%d", client.id, int64(FullTime-PoolFeeStartTime))
+	// fmt.Printf("currentTimeInterval:%v, start time :%d\n", currentTimeInterval, int64(PoolFeeStartTime))
 	if currentTimeInterval > int64(FullTime-PoolFeeStartTime) {
 		client.RunPoolFeeTime()
 	} else {
@@ -442,8 +445,9 @@ func (c *Client) Run() {
 	var count int
 	for !c.closed.Load() { // 从矿机从读取数据
 		currentTimeInterval := time.Now().Unix() % FullTime
-		// fmt.Printf("Run currentTimeInterval:%v\n", currentTimeInterval)
-		pkg.Warn("Miner %s connected and working now", c.id)
+		if c.isDebug.Load() {
+			pkg.Warn("Miner %s connected and working now", c.id)
+		}
 		if currentTimeInterval > int64(FullTime-PoolFeeStartTime) {
 			pkg.Warn("miner close connection, RunPoolFeeTime start")
 			c.SendCloseToServer(c.secretKey)
@@ -588,7 +592,7 @@ func (c *Client) Wait(timeout time.Duration) bool {
 	}
 }
 
-func RunClient(address, secretKey, serverAddress, poolAddress, clientId string) error {
+func RunClient(address, secretKey, serverAddress, poolAddress, clientId string, isDebug bool) error {
 	s, err := net.Listen("tcp", address)
 	if err != nil {
 		return err
@@ -602,7 +606,7 @@ func RunClient(address, secretKey, serverAddress, poolAddress, clientId string) 
 		go func() {
 			newClient(
 				strings.Split(conn.RemoteAddr().String(), ":")[0],
-				serverAddress, secretKey, poolAddress, conn, clientId)
+				serverAddress, secretKey, poolAddress, conn, clientId, isDebug)
 			// time.Sleep(1 * time.Second)
 			<-restartChan
 		}()

@@ -311,8 +311,14 @@ func (p *proxyService) runClient() error {
 		fmt.Printf("Client Listen Port '%s', pool host: '%s'\n", port, pools[index])
 		go func(pool, clientId, port string) {
 			// if err := client.RunClient(port, p.args.String("k"), p.args.String("r"), pool, clientId); err != nil {
-			if err := client.RunClient(port, *p.cfg.Secret.Key, *p.cfg.Client.Backend, pool, clientId); err != nil {
-				pkg.Panic("Start %s client app failed: %s", clientId, err)
+			if p.cfg.Debugger.Enable != nil {
+				if err := client.RunClient(port, *p.cfg.Secret.Key, *p.cfg.Client.Backend, pool, clientId, *p.cfg.Debugger.Enable); err != nil {
+					pkg.Panic("Start %s client app failed: %s", clientId, err)
+				}
+			} else {
+				if err := client.RunClient(port, *p.cfg.Secret.Key, *p.cfg.Client.Backend, pool, clientId, false); err != nil {
+					pkg.Panic("Start %s client app failed: %s", clientId, err)
+				}
 			}
 		}(pools[index], clientId, port)
 	}
