@@ -22,10 +22,9 @@
     },
 
     "client": {
-      "enable": false,
+      "enable": true,
       "listen": "0.0.0.0:19999",
       "maxConnect": 32,
-      "pools": "eth-sg.flexpool.io:4444,eth-kr.flexpool.io:4444",
       "backend": "0.0.0.0:19998"
     },
 
@@ -34,7 +33,7 @@
       "listen": "0.0.0.0:19998",
       "pool": "eth-sg.flexpool.io:4444",
       "offline": 120,
-      "web": false
+      "web": true
     }
 
   
