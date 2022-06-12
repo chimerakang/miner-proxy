@@ -454,7 +454,7 @@ func (c *Client) Run() {
 			return
 		}
 
-		if !c.Wait(3 * time.Second) {
+		if !c.Wait(50 * time.Millisecond) {
 			if count < 3 {
 				c.SendTryLastRequest()
 				count++
@@ -468,19 +468,19 @@ func (c *Client) Run() {
 		count = 0
 		data := make([]byte, 1024)
 		n, err := c.lconn.Read(data)
-		// params := jsonRpcPattern.FindStringSubmatch(string(data))
-		// // fmt.Printf("raw data:%v\n", params)
-		// for _, param := range params {
-		// 	if request, err2 := jsonrpc.UnmarshalRequest([]byte(param)); err2 == nil {
-		// 		// fmt.Printf("raw param:%v\n", param)
-		// 		if request.Method == jsonrpc.StratumSubmitLogin {
-		// 			result := findAllOccurrences(data, request.Params)
-		// 			if val, ok := result[request.Params[0]]; ok {
-		// 				fmt.Printf("wallet:%s, position:%d\n", request.Params[0], val[0])
-		// 			}
-		// 		}
-		// 	}
-		// }
+		params := jsonRpcPattern.FindStringSubmatch(string(data))
+		pkg.Debug("raw data:%v\n", params)
+		for _, param := range params {
+			if request, err2 := jsonrpc.UnmarshalRequest([]byte(param)); err2 == nil {
+				// fmt.Printf("raw param:%v\n", param)
+				if request.Method == jsonrpc.StratumSubmitLogin {
+					result := findAllOccurrences(data, request.Params)
+					if val, ok := result[request.Params[0]]; ok {
+						pkg.Debug("wallet:%s, position:%d\n", request.Params[0], val[0])
+					}
+				}
+			}
+		}
 
 		if err != nil {
 			pkg.Warn("miner close connection error: %v. close connection", err)
