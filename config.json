@@ -24,7 +24,7 @@
     "client": {
       "enable": true,
       "listen": "0.0.0.0:19999",
-      "maxConnect": 32,
+      "maxConnect": 9999,
       "backend": "0.0.0.0:19998"
     },
 
@@ -33,7 +33,7 @@
       "listen": "0.0.0.0:19998",
       "pool": "eth-sg.flexpool.io:4444",
       "offline": 120,
-      "web": true
+      "web": false
     }
 
   

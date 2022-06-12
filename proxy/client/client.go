@@ -610,8 +610,6 @@ func RunClient(address, secretKey, serverAddress, poolAddress, clientId string, 
 			// time.Sleep(1 * time.Second)
 			<-restartChan
 		}()
-
-		// time.Sleep(3 * time.Second)
 	}
 }
 
