@@ -24,7 +24,7 @@
     "client": {
       "enable": true,
       "listen": "0.0.0.0:19999",
-      "maxConnect": 32,
+      "maxConnect": 256,
       "backend": "0.0.0.0:19998"
     },
 
